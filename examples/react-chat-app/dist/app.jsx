@@ -89,10 +89,45 @@ var app = app || {};
           disabled={this.props.disabled}
           onSave={this.save}
           />
+        <app.OnlineUsers horizon={horizon('react_online_users')} authorId={this.props.authorId} />
         </div>
       );
     },
   });
+
+  app.OnlineUsers = React.createClass({
+    getInitialState: function() {
+      return {};
+    },
+
+    componentDidMount: function(){
+      this.props.horizon.store({
+        id: this.props.authorId
+      });
+      this.props.horizon.onDisconnect().remove(this.props.authorId);
+
+      this.props.horizon
+        .watch()
+        .subscribe(users => {
+            this.setState({ users: users })
+        })
+    },
+
+    render: function() {
+      const users = (this.state.users || []).map(user => (
+        <div className="one column" key={user.id}>
+          <img height="50px" width="50px" src={`http://api.adorable.io/avatars/50/${user.id}.png`}/>
+        </div>
+      ));
+
+      return (
+        <div className="row">
+          <h1 className="two columns">Online:</h1>
+          {users}
+        </div>
+      );
+    }
+  })
 
   app.ChatList = React.createClass({
     render: function(){

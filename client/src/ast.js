@@ -263,8 +263,9 @@ function writeOp(name, args, documents) {
     // Don't bother sending no-ops to the server
     return Observable.empty()
   }
+  const onDisconnectOptions = this._on_disconnect ? { on_disconnect: true } : {}
   const options = Object.assign(
-    {}, this._query, { data: serialize(wrappedDocs) })
+    {}, this._query, { data: serialize(wrappedDocs) }, onDisconnectOptions)
   let observable = this._sendRequest(name, options)
   if (isBatch) {
     // If this is a batch writeOp, each document may succeed or fail
@@ -300,12 +301,13 @@ function writeOp(name, args, documents) {
 }
 
 export class Collection extends TermBase {
-  constructor(sendRequest, collectionName, lazyWrites) {
+  constructor(sendRequest, collectionName, lazyWrites, onDisconnect) {
     const query = { collection: collectionName }
     const legalMethods = [
       'find', 'findAll', 'order', 'above', 'below', 'limit' ]
     super(sendRequest, query, legalMethods)
     this._lazyWrites = lazyWrites
+    this._on_disconnect = onDisconnect
   }
   store(documents) {
     return writeOp.call(this, 'store', arguments, documents)
@@ -339,6 +341,9 @@ export class Collection extends TermBase {
       }
     })
     return writeOp.call(this, 'removeAll', arguments, wrapped)
+  }
+  onDisconnect() {
+    return new Collection(this._sendRequest, this._query.collection, this._lazyWrites, true);
   }
 }
 

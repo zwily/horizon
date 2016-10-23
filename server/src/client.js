@@ -16,6 +16,7 @@ class Client {
     this._permissions_enabled = this._server._permissions_enabled;
     this._metadata = metadata;
     this._requests = new Map();
+    this._on_disconnect_requests = new Map();
     this.user_info = { };
 
     this._socket.on('close', (code, msg) =>
@@ -38,6 +39,11 @@ class Client {
     if (this.user_feed) {
       this.user_feed.close().catch(() => { });
     }
+    this._on_disconnect_requests.forEach((request) => {
+      logger.debug('Running on_disconnect request', request._raw_request.request_id);
+      request.run();
+    });
+    this._on_disconnect_requests.clear();
     this._requests.forEach((request) => {
       request.close();
     });
@@ -161,13 +167,22 @@ class Client {
     }
 
     const request = new Request(raw_request, endpoint, this);
-    this._requests.set(raw_request.request_id, request);
-    request.run();
+    if (raw_request.options && raw_request.options.on_disconnect === true) {
+      this._on_disconnect_requests.set(raw_request.request_id, request);
+    } else {
+      this._requests.set(raw_request.request_id, request);
+      request.run();
+    }
   }
 
   remove_request(raw_request) {
-    const request = this._requests.get(raw_request.request_id);
-    this._requests.delete(raw_request.request_id);
+    let request;
+    if (request = this._requests.get(raw_request.request_id)) {
+      this._requests.delete(raw_request.request_id);
+    } else if (request = this._on_disconnect_requests.get(raw_request.request_id)) {
+      this._on_disconnect_requests.delete(raw_request.request_id);
+    }
+
     if (request) {
       request.close();
     }

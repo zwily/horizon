@@ -50,6 +50,7 @@ const write_id_optional = Joi.object({
 const write_id_required = Joi.object({
   timeout: Joi.number().integer().greater(-1).optional().default(null),
   collection: Joi.string().token().required(),
+  on_disconnect: Joi.boolean().optional(),
   data: Joi.array().min(1).items(Joi.object({
     id: Joi.any().required(),
   }).unknown(true)).required(),
